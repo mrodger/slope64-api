@@ -565,29 +565,12 @@
 
 <div class="chat-widget" id="chat-widget" style="display:none;">
   <div class="chat-header">
-    <div class="tabs-mini">
-      <button class="tab-mini active" data-mode="manual">📖 Manual</button>
-      <button class="tab-mini" data-mode="helper">🤖 AI Helper</button>
-    </div>
+    <span>🤖 AI Helper</span>
     <button class="close-btn" id="close-chat">✕</button>
   </div>
 
-  <!-- Manual chat -->
-  <div class="chat-content active" id="manual-content">
-    <div class="chat-messages" id="chat-messages">
-      <div class="chat-empty" id="chat-empty">
-        Ask anything about Slope64 — input format, material parameters, interpreting results, or the FEM method.
-      </div>
-    </div>
-    <div class="chat-input-row">
-      <textarea class="chat-input" id="chat-input" rows="1"
-        placeholder="e.g. How do I define material properties?"></textarea>
-      <button class="chat-send" id="chat-send" aria-label="Send">↑</button>
-    </div>
-  </div>
-
   <!-- AI Helper -->
-  <div class="chat-content" id="helper-content">
+  <div class="chat-content active" id="helper-content">
     <div class="chat-messages" id="helper-messages">
       <div class="chat-empty" id="helper-empty">
         Ask the AI Helper for detailed guidance on slope stability analysis, FEM concepts, and slope64 usage.
@@ -875,101 +858,21 @@ document.getElementById('res-toggle').addEventListener('click', () => {
   btn.textContent = pre.classList.contains('visible') ? 'Hide full output ▴' : 'Show full output ▾';
 });
 
-// ── Chat functionality ──
-const chatHistory = []; // {role, content}
-const chatInput   = document.getElementById('chat-input');
-const chatSendBtn = document.getElementById('chat-send');
-const chatMsgs    = document.getElementById('chat-messages');
-const chatEmpty   = document.getElementById('chat-empty');
-
-// Auto-grow textarea
-chatInput.addEventListener('input', () => {
-  chatInput.style.height = 'auto';
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 80) + 'px';
-});
-
-chatInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
-});
-chatSendBtn.addEventListener('click', sendChat);
-
-function appendBubble(role, text) {
-  chatEmpty.style.display = 'none';
-  const el = document.createElement('div');
-  el.className = `chat-bubble ${role}`;
-  el.textContent = text;
-  chatMsgs.appendChild(el);
-  chatMsgs.scrollTop = chatMsgs.scrollHeight;
-  return el;
-}
-
-async function sendChat() {
-  const text = chatInput.value.trim();
-  if (!text) return;
-
-  chatInput.value = '';
-  chatInput.style.height = 'auto';
-  chatSendBtn.disabled = true;
-
-  appendBubble('user', text);
-  chatHistory.push({ role: 'user', content: text });
-
-  const thinking = appendBubble('thinking', 'Thinking…');
-
-  try {
-    const resp = await fetch(`${API}/ask`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: chatHistory }),
-    });
-    const data = await resp.json();
-    thinking.remove();
-    if (!resp.ok) {
-      appendBubble('assistant', '⚠ ' + (data.detail || 'Error'));
-    } else {
-      chatHistory.push({ role: 'assistant', content: data.reply });
-      appendBubble('assistant', data.reply);
-    }
-  } catch (err) {
-    thinking.remove();
-    appendBubble('assistant', '⚠ Network error: ' + err.message);
-  } finally {
-    chatSendBtn.disabled = false;
-    chatInput.focus();
-  }
-}
 
 // ── Floating Chat Widget ──
 const chatFab = document.getElementById('chat-fab');
 const chatWidget = document.getElementById('chat-widget');
 const closeChat = document.getElementById('close-chat');
-const tabsMini = document.querySelectorAll('.tab-mini');
-const chatContents = document.querySelectorAll('.chat-content');
 
 chatFab.addEventListener('click', () => {
   chatWidget.style.display = chatWidget.style.display === 'none' ? 'flex' : 'none';
   chatFab.classList.toggle('hidden', chatWidget.style.display !== 'none');
-  if (chatWidget.style.display !== 'none') document.getElementById('chat-input').focus();
+  if (chatWidget.style.display !== 'none') document.getElementById('helper-input').focus();
 });
 
 closeChat.addEventListener('click', () => {
   chatWidget.style.display = 'none';
   chatFab.classList.remove('hidden');
-});
-
-tabsMini.forEach(tab => {
-  tab.addEventListener('click', () => {
-    const mode = tab.dataset.mode;
-    tabsMini.forEach(t => t.classList.remove('active'));
-    chatContents.forEach(c => c.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById(`${mode}-content`).classList.add('active');
-    if (mode === 'manual') {
-      document.getElementById('chat-input').focus();
-    } else if (mode === 'helper') {
-      document.getElementById('helper-input').focus();
-    }
-  });
 });
 
 // ── AI Helper chat ──
