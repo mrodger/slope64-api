@@ -522,9 +522,19 @@
   </div>
 </div>
 
+<!-- Helper buttons row -->
+<div style="padding: 0 16px; margin-bottom: 16px; display: flex; gap: 10px;">
+  <button class="btn-help" id="helper-btn" style="flex: 1; margin-top: 0;">
+    🤖 AI Helper
+  </button>
+  <button class="btn-help" id="manual-toggle" style="flex: 1; margin-top: 0;">
+    📖 Ask manual
+  </button>
+</div>
+
 <!-- Manual Q&A chat -->
 <div class="chat-section">
-  <button class="chat-toggle" id="chat-toggle">
+  <button class="chat-toggle" id="chat-toggle" style="display:none;">
     <span>📖 Ask the manual</span>
     <span class="caret">▼</span>
   </button>
@@ -899,6 +909,22 @@ async function sendChat() {
     chatInput.focus();
   }
 }
+
+// AI Helper button — opens slope64-chatbot
+document.getElementById('helper-btn').addEventListener('click', () => {
+  // Determine the chatbot URL (assumes same host, port 8094)
+  const host = window.location.hostname;
+  const chatbotUrl = `http://${host}:8094/`;
+  window.open(chatbotUrl, 'slope64-helper', 'width=900,height=700,resizable=yes,scrollbars=yes');
+});
+
+// Manual toggle button
+document.getElementById('manual-toggle').addEventListener('click', () => {
+  const chatToggle = document.getElementById('chat-toggle');
+  const open = document.getElementById('chat-body').classList.toggle('open');
+  chatToggle.classList.toggle('open', open);
+  if (open) document.getElementById('chat-input').focus();
+});
 
 // .dat help modal
 const modal = document.getElementById('dat-modal');
