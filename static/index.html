@@ -588,15 +588,15 @@
 
   <!-- AI Helper -->
   <div class="chat-content" id="helper-content">
-    <div class="chat-messages" id="helper-messages" style="justify-content:center;">
-      <div class="chat-empty">
-        Open the AI Helper in a new window for detailed guidance on slope stability analysis.
+    <div class="chat-messages" id="helper-messages">
+      <div class="chat-empty" id="helper-empty">
+        Ask the AI Helper for detailed guidance on slope stability analysis, FEM concepts, and slope64 usage.
       </div>
     </div>
     <div class="chat-input-row">
-      <button class="btn" id="open-helper-btn" style="width:100%;margin-top:0;">
-        Open AI Helper in new window →
-      </button>
+      <textarea class="chat-input" id="helper-input" rows="1"
+        placeholder="e.g. What factors affect slope stability?"></textarea>
+      <button class="chat-send" id="helper-send" aria-label="Send">↑</button>
     </div>
   </div>
 </div>
@@ -964,16 +964,97 @@ tabsMini.forEach(tab => {
     chatContents.forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById(`${mode}-content`).classList.add('active');
-    if (mode === 'manual') document.getElementById('chat-input').focus();
+    if (mode === 'manual') {
+      document.getElementById('chat-input').focus();
+    } else if (mode === 'helper') {
+      document.getElementById('helper-input').focus();
+    }
   });
 });
 
-// Open AI Helper in new window
-document.getElementById('open-helper-btn').addEventListener('click', () => {
-  const host = window.location.hostname;
-  const chatbotUrl = `http://${host}:8094/`;
-  window.open(chatbotUrl, 'slope64-helper', 'width=900,height=700,resizable=yes,scrollbars=yes');
+// ── AI Helper chat ──
+const helperHistory = []; // {role, content}
+const helperInput = document.getElementById('helper-input');
+const helperSendBtn = document.getElementById('helper-send');
+const helperMsgs = document.getElementById('helper-messages');
+const helperEmpty = document.getElementById('helper-empty');
+
+// Auto-grow textarea
+helperInput.addEventListener('input', () => {
+  helperInput.style.height = 'auto';
+  helperInput.style.height = Math.min(helperInput.scrollHeight, 80) + 'px';
 });
+
+helperInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHelperChat(); }
+});
+helperSendBtn.addEventListener('click', sendHelperChat);
+
+function appendHelperBubble(role, text) {
+  helperEmpty.style.display = 'none';
+  const el = document.createElement('div');
+  el.className = `chat-bubble ${role}`;
+  el.textContent = text;
+  helperMsgs.appendChild(el);
+  helperMsgs.scrollTop = helperMsgs.scrollHeight;
+  return el;
+}
+
+async function sendHelperChat() {
+  const text = helperInput.value.trim();
+  if (!text) return;
+
+  helperInput.value = '';
+  helperInput.style.height = 'auto';
+  helperSendBtn.disabled = true;
+
+  appendHelperBubble('user', text);
+  helperHistory.push({ role: 'user', content: text });
+
+  const thinking = appendHelperBubble('thinking', 'Thinking…');
+
+  try {
+    const host = window.location.hostname;
+    const resp = await fetch(`http://${host}:8094/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: helperHistory }),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let assistantBubble = null;
+    let assistantText = '';
+    thinking.remove();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        const ev = JSON.parse(part.slice(6));
+        if (ev.type === 'text') {
+          if (!assistantBubble) assistantBubble = appendHelperBubble('assistant', '');
+          assistantText += ev.content;
+          assistantBubble.textContent = assistantText;
+          helperMsgs.scrollTop = helperMsgs.scrollHeight;
+        }
+      }
+    }
+
+    if (assistantText) helperHistory.push({ role: 'assistant', content: assistantText });
+  } catch (err) {
+    thinking.remove();
+    appendHelperBubble('assistant', '⚠ Error: ' + err.message);
+  } finally {
+    helperSendBtn.disabled = false;
+    helperInput.focus();
+  }
+}
 
 // .dat help modal
 const modal = document.getElementById('dat-modal');
