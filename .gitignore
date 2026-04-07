@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 *.pyo
 bin/slope64.exe
+static/*.png
+static/*.ico
