@@ -18,13 +18,13 @@ Runs the original Windows binary via Wine on Linux, exposing a simple HTTP inter
 
 ```json
 {
-  "fos": 1.547,
+  "fos": 1.56,
   "srf_steps": [
-    {"srf": 1.0,  "iterations": 7,   "fmax": 0.40},
-    {"srf": 1.5,  "iterations": 500, "fmax": 0.35},
-    ...
+    {"srf": 0.5,    "max_disp": 0.0305, "iterations": 2},
+    {"srf": 1.0,    "max_disp": 0.0305, "iterations": 7},
+    {"srf": 1.5625, "max_disp": 0.0403, "iterations": 1000}
   ],
-  "stdout": "   SRF= 1.000000   ITERS=   1   FMAX= ...",
+  "res": "   _____ _      ____  ...\nEstimated Factor of Safety =      1.56",
   "output_files": {
     "res": "...",
     "msh": "...",
@@ -41,11 +41,17 @@ Runs the original Windows binary via Wine on Linux, exposing a simple HTTP inter
 ### Direct
 
 ```bash
+# 1. Download the binary from Griffiths' site
+mkdir -p bin
+curl -o bin/slope64.exe https://inside.mines.edu/~vgriffit/slope64/slope64.exe
+
+# 2. Install Wine
+sudo apt install wine wine32:i386
+
+# 3. Install Python deps and run
 pip install -r requirements.txt
 uvicorn server:app --host 0.0.0.0 --port 8110
 ```
-
-Requires `wine` and `wine32` installed (`apt install wine wine32`).
 
 ### Docker
 
