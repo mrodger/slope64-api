@@ -5,6 +5,38 @@ Runs the original Windows binary via Wine on Linux, exposing a simple HTTP inter
 
 ---
 
+## Web UI
+
+A browser-based GUI is served at `http://localhost:8110/` alongside the API.
+It works on both desktop and mobile.
+
+### Running an example
+
+1. Open `http://<host>:8110/` in your browser.
+2. The **Examples** tab is selected by default. Choose one of the seven bundled cases from the dropdown — each is labelled with its key parameters.
+3. Tap **Run analysis**. Results appear below within a few seconds.
+
+### Uploading your own file
+
+1. Switch to the **Upload .dat** tab.
+2. Tap the file area (or drag and drop on desktop) and select your `.dat` file.
+3. Tap **Run analysis**.
+
+### Reading the results
+
+- **Factor of Safety** — displayed large with a colour-coded badge:
+  - Green **Stable** — FoS ≥ 1.5
+  - Amber **Marginal** — 1.2 ≤ FoS < 1.5
+  - Red **Unstable** — FoS < 1.2
+- **Strength Reduction Steps** — each trial SRF value, the maximum nodal displacement, iteration count, and whether that step converged. A ✓ means the mesh converged within the iteration limit; ✗ means it did not (typically the final bracketing step beyond the true FoS).
+- **Show full output** — expands the raw `.res` text from Slope64, including the full trial factor table and program header.
+
+### Mobile
+
+The UI is optimised for phones. Add it to your home screen (iOS: Share → Add to Home Screen; Android: browser menu → Install app) for a full-screen experience.
+
+---
+
 ## Endpoints
 
 | Method | Path | Description |
