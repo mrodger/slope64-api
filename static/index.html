@@ -239,6 +239,103 @@
   }
   pre.visible { display: block; }
 
+  /* ── Help button ── */
+  .btn-help {
+    width: 100%; padding: 13px 16px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; background: var(--surface); color: var(--primary);
+    margin-top: 10px; display: flex; align-items: center;
+    justify-content: center; gap: 8px;
+    transition: background 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 48px;
+  }
+  .btn-help:active { background: var(--bg); }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    z-index: 100; display: none; align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  @media (min-width: 600px) {
+    .modal-backdrop { align-items: center; }
+  }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 640px;
+    max-height: 90dvh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0 env(safe-area-inset-bottom, 16px);
+    box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+    animation: slideUp 0.22s ease;
+  }
+  @media (min-width: 600px) {
+    .modal { border-radius: 16px; max-height: 80dvh; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .modal-handle {
+    width: 40px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 12px auto 0;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 { font-size: 16px; font-weight: 700; color: var(--primary); }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: var(--bg); color: var(--muted);
+    font-size: 18px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .modal-body { padding: 20px; }
+
+  .modal-body h3 {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin: 20px 0 10px;
+  }
+  .modal-body h3:first-child { margin-top: 0; }
+
+  .modal-body p  { font-size: 14px; line-height: 1.6; color: var(--text); margin-bottom: 10px; }
+  .modal-body ul { font-size: 14px; line-height: 1.7; color: var(--text); padding-left: 18px; margin-bottom: 10px; }
+  .modal-body li { margin-bottom: 4px; }
+  .modal-body code {
+    font-family: var(--mono); font-size: 12px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px;
+  }
+  .modal-body pre {
+    display: block; font-size: 11.5px; line-height: 1.65;
+    background: #f8faf8; border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: pre; margin: 0 0 10px;
+  }
+  .dat-comment { color: var(--muted); }
+  .dat-value   { color: var(--primary); font-weight: 700; }
+
+  .param-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 10px; }
+  .param-table th {
+    text-align: left; padding: 7px 10px;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted);
+    border-bottom: 2px solid var(--border);
+  }
+  .param-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .param-table tr:last-child td { border-bottom: none; }
+  .param-table td:first-child { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+
   /* ── Responsive breakpoints ── */
   @media (max-width: 480px) {
     .fos-value { font-size: 56px; }
@@ -296,6 +393,9 @@
         <span class="spinner"></span>
         Run analysis
       </button>
+      <button class="btn-help" id="dat-help-btn">
+        📄 How to create a .dat file
+      </button>
     </div>
   </div>
 
@@ -337,6 +437,113 @@
       <pre id="res-output"></pre>
     </div>
 
+  </div>
+</div>
+
+<!-- .dat format help modal -->
+<div class="modal-backdrop" id="dat-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="modal-title">Creating a .dat input file</h2>
+      <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <h3>Overview</h3>
+      <p>A Slope64 input file describes a trapezoidal embankment sitting on a flat foundation layer. Each parameter is preceded by a quoted label — the label is ignored by the solver, only the value on the next line matters.</p>
+
+      <h3>Geometry</h3>
+      <p>The mesh is defined by five dimensions:</p>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>w1</td><td>Width of flat crest (top of embankment)</td></tr>
+          <tr><td>s1</td><td>Horizontal run of the slope face</td></tr>
+          <tr><td>w2</td><td>Foundation width beyond the toe</td></tr>
+          <tr><td>h1</td><td>Height of embankment</td></tr>
+          <tr><td>h2</td><td>Thickness of foundation layer</td></tr>
+        </tbody>
+      </table>
+      <p>The slope angle follows from <code>arctan(h1 / s1)</code>. All dimensions share the same unit (typically metres).</p>
+
+      <h3>Mesh density</h3>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>nx1</td><td>Elements across embankment + slope</td></tr>
+          <tr><td>nx2</td><td>Elements in foundation beyond toe</td></tr>
+          <tr><td>ny1</td><td>Elements through embankment height</td></tr>
+          <tr><td>ny2</td><td>Elements through foundation depth</td></tr>
+        </tbody>
+      </table>
+      <p>Coarser meshes run faster; finer meshes give more accurate FoS. Values of 10–30 per zone are typical.</p>
+
+      <h3>Material properties</h3>
+      <p>Set <code>np_types</code> to the number of material zones. For each zone, provide six values on one line:</p>
+      <p style="font-family:var(--mono);font-size:13px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;">phi &nbsp; c &nbsp; psi &nbsp; gamma &nbsp; E &nbsp; nu</p>
+      <table class="param-table">
+        <thead><tr><th>Symbol</th><th>Meaning</th><th>Typical units</th></tr></thead>
+        <tbody>
+          <tr><td>phi</td><td>Friction angle</td><td>degrees</td></tr>
+          <tr><td>c</td><td>Cohesion</td><td>kPa</td></tr>
+          <tr><td>psi</td><td>Dilation angle (0 = non-dilating)</td><td>degrees</td></tr>
+          <tr><td>gamma</td><td>Unit weight</td><td>kN/m³</td></tr>
+          <tr><td>E</td><td>Young's modulus</td><td>kPa (e.g. 1e5)</td></tr>
+          <tr><td>nu</td><td>Poisson's ratio</td><td>— (e.g. 0.3)</td></tr>
+        </tbody>
+      </table>
+      <p>If <code>np_types &gt; 1</code>, follow with an element-type array assigning each element to a zone (row-by-row, bottom to top).</p>
+
+      <h3>Other parameters</h3>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Typical value</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>k_h</td><td>0.0</td><td>Pseudo-static horizontal acceleration; 0 for static analysis</td></tr>
+          <tr><td>nosurf</td><td>0</td><td>Number of phreatic surface points; 0 = dry</td></tr>
+          <tr><td>gam_w</td><td>0.0</td><td>Unit weight of water (9.81 kN/m³ if seepage is active)</td></tr>
+          <tr><td>limit</td><td>1000</td><td>Maximum iterations per SRF step</td></tr>
+          <tr><td>fos_tol</td><td>0.02</td><td>Convergence tolerance on FoS (±0.02 is standard)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Minimal example</h3>
+      <pre><span class="dat-comment">'My slope'
+
+"Width of top of embankment (w1)"</span>
+<span class="dat-value">12.0</span>
+<span class="dat-comment">"Width of sloping portion (s1)"</span>
+<span class="dat-value">20.0</span>
+<span class="dat-comment">"Foundation width beyond toe (w2)"</span>
+<span class="dat-value">12.0</span>
+<span class="dat-comment">"Embankment height (h1)"</span>
+<span class="dat-value">10.0</span>
+<span class="dat-comment">"Foundation thickness (h2)"</span>
+<span class="dat-value">10.0</span>
+<span class="dat-comment">"nx1"</span>  <span class="dat-value">20</span>
+<span class="dat-comment">"nx2"</span>  <span class="dat-value">10</span>
+<span class="dat-comment">"ny1"</span>  <span class="dat-value">10</span>
+<span class="dat-comment">"ny2"</span>  <span class="dat-value">10</span>
+<span class="dat-comment">"Number of property groups (np_types)"</span>
+<span class="dat-value">1</span>
+<span class="dat-comment">"Material properties (phi, c, psi, gamma, E, nu)"</span>
+<span class="dat-value">30.0  5.0  0.0  20.0  1.e5  0.3</span>
+<span class="dat-comment">"Property group per element (not needed for np_types=1)"
+
+"Horizontal acceleration (k_h)"</span>
+<span class="dat-value">0.0</span>
+<span class="dat-comment">"Free surface points (nosurf)"</span>
+<span class="dat-value">0</span>
+<span class="dat-comment">"Unit weight of water (gam_w)"</span>
+<span class="dat-value">0.0</span>
+<span class="dat-comment">"Iteration limit"</span>
+<span class="dat-value">1000</span>
+<span class="dat-comment">"FoS tolerance"</span>
+<span class="dat-value">0.02</span></pre>
+
+      <p style="font-size:13px;color:var(--muted);">This matches ex1 and should return FoS ≈ 1.56. Use the bundled examples as starting points.</p>
+
+    </div>
   </div>
 </div>
 
@@ -506,6 +713,16 @@ document.getElementById('res-toggle').addEventListener('click', () => {
   pre.classList.toggle('visible');
   btn.textContent = pre.classList.contains('visible') ? 'Hide full output ▴' : 'Show full output ▾';
 });
+
+// .dat help modal
+const modal = document.getElementById('dat-modal');
+function openModal()  { modal.classList.add('open');  document.body.style.overflow = 'hidden'; }
+function closeModal() { modal.classList.remove('open'); document.body.style.overflow = ''; }
+
+document.getElementById('dat-help-btn').addEventListener('click', openModal);
+document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 </script>
 </body>
 </html>
