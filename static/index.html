@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#2c5f2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Slope64</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,139 +19,263 @@
     --text: #1a2b1a;
     --muted: #6b7c6b;
     --danger: #c0392b;
-    --mono: 'JetBrains Mono', 'Fira Mono', monospace;
+    --warning: #e67e22;
+    --mono: 'JetBrains Mono', 'Fira Mono', 'Courier New', monospace;
+    --safe: #2c5f2e;
+    --radius: 12px;
   }
+
   body {
     font-family: system-ui, -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding: 32px 16px;
+    min-height: 100dvh;
+    padding: 0;
+    /* Reserve space for bottom bar on mobile */
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
-  .container { max-width: 860px; margin: 0 auto; }
 
-  header { margin-bottom: 32px; }
-  header h1 { font-size: 22px; font-weight: 700; color: var(--primary); }
-  header p { font-size: 14px; color: var(--muted); margin-top: 4px; }
-  header a { color: var(--accent); text-decoration: none; }
-  header a:hover { text-decoration: underline; }
+  /* ── Header ── */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 16px 20px 14px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0));
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .icon {
+    width: 36px; height: 36px; flex-shrink: 0;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header p { font-size: 12px; opacity: 0.75; margin-top: 1px; }
+  header a { color: rgba(255,255,255,0.9); text-decoration: none; }
 
+  /* ── Main content ── */
+  .page { padding: 16px; max-width: 640px; margin: 0 auto; }
+
+  /* ── Card ── */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 20px;
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
   }
-  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--primary); }
+  .card-title {
+    font-size: 13px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 14px;
+  }
 
-  .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+  /* ── Tabs ── */
+  .tabs {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-bottom: 18px;
+  }
   .tab {
-    padding: 8px 18px; font-size: 14px; cursor: pointer; border: none;
-    background: none; color: var(--muted); font-weight: 500;
-    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    padding: 12px 0; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: 2px solid var(--border);
+    border-radius: 8px; background: var(--bg);
+    color: var(--muted); text-align: center;
+    transition: all 0.15s; -webkit-tap-highlight-color: transparent;
   }
-  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-
+  .tab.active {
+    border-color: var(--primary); background: var(--primary);
+    color: #fff;
+  }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 6px; }
+  /* ── Form controls ── */
+  label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px; }
 
-  select, input[type=file] {
-    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
-    border-radius: 6px; font-size: 14px; background: var(--bg);
-    color: var(--text); outline: none;
+  select {
+    width: 100%; padding: 14px 12px;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 16px; /* prevent iOS zoom */
+    background: var(--bg); color: var(--text);
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    outline: none;
   }
-  select:focus, input[type=file]:focus { border-color: var(--accent); }
+  select:focus { border-color: var(--accent); }
 
+  /* ── Drop zone ── */
   .drop-zone {
-    border: 2px dashed var(--border); border-radius: 8px;
-    padding: 32px; text-align: center; cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    font-size: 14px; color: var(--muted);
+    border: 2px dashed var(--border); border-radius: 10px;
+    padding: 36px 20px; text-align: center; cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
   }
-  .drop-zone:hover, .drop-zone.dragover {
+  .drop-zone:active, .drop-zone.dragover {
     border-color: var(--accent); background: #f0faf0;
   }
-  .drop-zone .filename { margin-top: 8px; font-weight: 600; color: var(--primary); font-size: 13px; }
-
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 24px; border: none; border-radius: 6px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    background: var(--primary); color: #fff; margin-top: 16px;
-    transition: opacity 0.15s;
+  .drop-zone .icon { font-size: 32px; margin-bottom: 8px; display: block; }
+  .drop-zone .hint { font-size: 14px; color: var(--muted); }
+  .drop-zone .filename {
+    margin-top: 10px; font-weight: 700; color: var(--primary);
+    font-size: 14px; word-break: break-all;
   }
-  .btn:hover { opacity: 0.88; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Button ── */
+  .btn {
+    width: 100%; padding: 16px;
+    border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer; background: var(--primary); color: #fff;
+    margin-top: 14px; display: flex; align-items: center;
+    justify-content: center; gap: 10px;
+    transition: opacity 0.15s; -webkit-tap-highlight-color: transparent;
+    min-height: 54px;
+  }
+  .btn:active { opacity: 0.85; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .btn .spinner {
-    width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4);
+    width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.35);
     border-top-color: #fff; border-radius: 50%;
-    animation: spin 0.6s linear infinite; display: none;
+    animation: spin 0.6s linear infinite; display: none; flex-shrink: 0;
   }
   .btn.loading .spinner { display: block; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Results */
-  #results { display: none; }
-
-  .fos-display {
-    text-align: center; padding: 28px;
-    border-bottom: 1px solid var(--border); margin-bottom: 24px;
+  /* ── Error ── */
+  .error-box {
+    background: #fdf0ef; border: 1px solid #f5c6c2; border-radius: 10px;
+    padding: 14px 16px; font-size: 14px; color: var(--danger);
+    margin-bottom: 16px; display: none;
   }
-  .fos-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-  .fos-value { font-size: 56px; font-weight: 700; line-height: 1.1; margin-top: 4px; }
-  .fos-value.safe { color: var(--primary); }
-  .fos-value.marginal { color: #e67e22; }
-  .fos-value.unsafe { color: var(--danger); }
-  .fos-interp { font-size: 13px; color: var(--muted); margin-top: 6px; }
 
+  /* ── FoS result ── */
+  .fos-card {
+    border-radius: var(--radius); padding: 28px 20px;
+    text-align: center; margin-bottom: 16px;
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .fos-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted);
+  }
+  .fos-value {
+    font-size: 72px; font-weight: 800; line-height: 1;
+    margin: 10px 0 6px; letter-spacing: -2px;
+  }
+  .fos-value.safe    { color: var(--safe); }
+  .fos-value.marginal { color: var(--warning); }
+  .fos-value.unsafe  { color: var(--danger); }
+
+  .fos-badge {
+    display: inline-block; padding: 5px 14px;
+    border-radius: 99px; font-size: 13px; font-weight: 600;
+    margin-top: 4px;
+  }
+  .fos-badge.safe    { background: #e8f5e9; color: var(--safe); }
+  .fos-badge.marginal { background: #fef3e2; color: var(--warning); }
+  .fos-badge.unsafe  { background: #fdecea; color: var(--danger); }
+
+  /* ── SRF table — mobile-card layout ── */
+  .srf-section { margin-bottom: 16px; }
+  .srf-section .card-title { margin-bottom: 12px; }
+
+  /* Desktop table */
+  .srf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 8px 12px; font-size: 11px; text-transform: uppercase;
-       letter-spacing: 0.06em; color: var(--muted); border-bottom: 2px solid var(--border); }
-  td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+  th {
+    text-align: left; padding: 9px 12px;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
   tr:last-child td { border-bottom: none; }
   tr.converged td { color: var(--primary); }
   tr.failed td { color: var(--muted); }
 
+  /* Mobile SRF cards (hidden on desktop) */
+  .srf-cards { display: none; }
+  .srf-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .srf-card:last-child { border-bottom: none; }
+  .srf-card .srf-status {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .srf-card.converged .srf-status { background: #e8f5e9; color: var(--safe); }
+  .srf-card.failed .srf-status    { background: #f5f5f5; color: var(--muted); }
+  .srf-card .srf-main { flex: 1; min-width: 0; }
+  .srf-card .srf-srf  { font-weight: 700; font-size: 14px; }
+  .srf-card .srf-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .srf-card .srf-iter { color: var(--muted); font-size: 12px; text-align: right; }
+
+  /* ── Raw output ── */
   .res-toggle {
-    font-size: 13px; color: var(--accent); cursor: pointer;
-    border: none; background: none; padding: 0; margin-top: 16px;
-    display: block;
+    font-size: 14px; color: var(--accent); cursor: pointer;
+    border: none; background: none; padding: 12px 0;
+    display: block; font-weight: 600;
+    -webkit-tap-highlight-color: transparent;
   }
   pre {
     background: #f8faf8; border: 1px solid var(--border);
-    border-radius: 6px; padding: 16px; font-family: var(--mono);
-    font-size: 12px; line-height: 1.6; overflow-x: auto; margin-top: 8px;
-    white-space: pre-wrap; display: none;
+    border-radius: 8px; padding: 14px; font-family: var(--mono);
+    font-size: 11px; line-height: 1.6; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: pre; display: none;
   }
   pre.visible { display: block; }
 
-  .error {
-    background: #fdf0ef; border: 1px solid #f5c6c2; border-radius: 6px;
-    padding: 14px 16px; font-size: 13px; color: var(--danger); display: none;
+  /* ── Responsive breakpoints ── */
+  @media (max-width: 480px) {
+    .fos-value { font-size: 56px; }
+    /* Switch to card layout for SRF table */
+    .srf-table-wrap { display: none; }
+    .srf-cards { display: block; }
+  }
+  @media (min-width: 641px) {
+    .page { padding: 28px 20px; }
+    .btn { width: auto; min-width: 180px; }
+    body { padding-bottom: 0; }
   }
 </style>
 </head>
 <body>
-<div class="container">
-  <header>
+
+<header>
+  <div class="icon">⛰</div>
+  <div>
     <h1>Slope64</h1>
-    <p>FEM slope stability analysis — <a href="https://inside.mines.edu/~vgriffit/" target="_blank">D.V. Griffiths</a>, Colorado School of Mines</p>
-  </header>
+    <p>FEM slope stability · <a href="https://inside.mines.edu/~vgriffit/" target="_blank">D.V. Griffiths</a>, Colorado School of Mines</p>
+  </div>
+</header>
+
+<div class="page">
 
   <div class="card">
     <div class="tabs">
-      <button class="tab active" data-tab="example">Run example</button>
-      <button class="tab" data-tab="upload">Upload .dat file</button>
+      <button class="tab active" data-tab="example">Examples</button>
+      <button class="tab" data-tab="upload">Upload .dat</button>
     </div>
 
     <!-- Example tab -->
     <div class="tab-panel active" id="tab-example">
       <label for="example-select">Select example</label>
       <select id="example-select">
-        <option value="">Loading examples…</option>
+        <option value="">Loading…</option>
       </select>
       <button class="btn" id="run-example-btn">
         <span class="spinner"></span>
@@ -157,9 +285,10 @@
 
     <!-- Upload tab -->
     <div class="tab-panel" id="tab-upload">
-      <label>Upload .dat file</label>
+      <label>Input file</label>
       <div class="drop-zone" id="drop-zone">
-        <div>Drop a .dat file here, or click to browse</div>
+        <span class="icon">📂</span>
+        <div class="hint">Tap to select or drop a .dat file</div>
         <div class="filename" id="filename-display"></div>
         <input type="file" id="file-input" accept=".dat" style="display:none">
       </div>
@@ -170,29 +299,44 @@
     </div>
   </div>
 
-  <div class="error" id="error-box"></div>
+  <div class="error-box" id="error-box"></div>
 
-  <div class="card" id="results">
-    <div class="fos-display">
+  <!-- Results -->
+  <div id="results" style="display:none">
+
+    <div class="fos-card">
       <div class="fos-label">Estimated Factor of Safety</div>
       <div class="fos-value" id="fos-value">—</div>
-      <div class="fos-interp" id="fos-interp"></div>
+      <div id="fos-badge"></div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Trial SRF</th>
-          <th>Max displacement</th>
-          <th>Iterations</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="srf-table"></tbody>
-    </table>
+    <div class="card srf-section">
+      <div class="card-title">Strength Reduction Steps</div>
 
-    <button class="res-toggle" id="res-toggle">Show full output</button>
-    <pre id="res-output"></pre>
+      <!-- Desktop table -->
+      <div class="srf-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Trial SRF</th>
+              <th>Max displacement</th>
+              <th>Iterations</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="srf-table"></tbody>
+        </table>
+      </div>
+
+      <!-- Mobile cards -->
+      <div class="srf-cards" id="srf-cards"></div>
+    </div>
+
+    <div class="card">
+      <button class="res-toggle" id="res-toggle">Show full output ▾</button>
+      <pre id="res-output"></pre>
+    </div>
+
   </div>
 </div>
 
@@ -204,12 +348,21 @@ fetch(`${API}/examples`)
   .then(r => r.json())
   .then(examples => {
     const sel = document.getElementById('example-select');
+    const descriptions = {
+      ex1: 'ex1 — Homogeneous slope (φ=20°, c=10kPa)',
+      ex2: 'ex2 — Layered slope, lower strength base',
+      ex3: 'ex3 — High cohesion, steep face',
+      ex4: 'ex4 — Low friction angle',
+      ex5: 'ex5 — Inclined failure surface',
+      ex6: 'ex6 — Marginally stable',
+      ex7: 'ex7 — Complex stratigraphy',
+    };
     sel.innerHTML = examples.map(e =>
-      `<option value="${e}">${e}</option>`
+      `<option value="${e}">${descriptions[e] || e}</option>`
     ).join('');
   });
 
-// Tab switching
+// Tabs
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -219,7 +372,7 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-// Drop zone
+// Drop zone / file input
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const filenameDisplay = document.getElementById('filename-display');
@@ -242,6 +395,7 @@ fileInput.addEventListener('change', () => {
 function setFile(file) {
   selectedFile = file;
   filenameDisplay.textContent = file.name;
+  dropZone.querySelector('.hint').textContent = 'File selected — ready to run';
   runUploadBtn.disabled = false;
 }
 
@@ -266,16 +420,10 @@ async function runAnalysis(fetchFn, btn) {
   btn.disabled = true;
   document.getElementById('error-box').style.display = 'none';
   document.getElementById('results').style.display = 'none';
-
   try {
     const resp = await fetchFn();
     const data = await resp.json();
-
-    if (!resp.ok) {
-      showError(data.detail || 'Unknown error');
-      return;
-    }
-
+    if (!resp.ok) { showError(data.detail || 'Unknown error'); return; }
     showResults(data);
   } catch (err) {
     showError(err.message);
@@ -285,54 +433,78 @@ async function runAnalysis(fetchFn, btn) {
   }
 }
 
+function fosClass(fos) {
+  if (fos == null) return '';
+  return fos >= 1.5 ? 'safe' : fos >= 1.2 ? 'marginal' : 'unsafe';
+}
+function fosLabel(fos) {
+  if (fos == null) return 'Analysis did not converge';
+  if (fos >= 1.5)  return 'Stable — FoS ≥ 1.5';
+  if (fos >= 1.2)  return 'Marginal stability — 1.2 ≤ FoS < 1.5';
+  return 'Unstable — FoS < 1.2';
+}
+
 function showResults(data) {
   const fos = data.fos;
+  const cls = fosClass(fos);
+
+  // FoS display
   const fosEl = document.getElementById('fos-value');
   fosEl.textContent = fos != null ? fos.toFixed(3) : 'N/A';
-  fosEl.className = 'fos-value ' + (fos == null ? '' : fos >= 1.5 ? 'safe' : fos >= 1.2 ? 'marginal' : 'unsafe');
+  fosEl.className = 'fos-value ' + cls;
 
-  const interp = document.getElementById('fos-interp');
-  if (fos == null) {
-    interp.textContent = 'Analysis did not converge';
-  } else if (fos >= 1.5) {
-    interp.textContent = 'Stable (FoS ≥ 1.5)';
-  } else if (fos >= 1.2) {
-    interp.textContent = 'Marginal stability (1.2 ≤ FoS < 1.5)';
-  } else {
-    interp.textContent = 'Unstable (FoS < 1.2)';
-  }
+  const badge = document.getElementById('fos-badge');
+  badge.innerHTML = `<span class="fos-badge ${cls}">${fosLabel(fos)}</span>`;
 
-  const tbody = document.getElementById('srf-table');
-  tbody.innerHTML = (data.srf_steps || []).map(row => {
-    const converged = row.iterations < 1000;
-    return `<tr class="${converged ? 'converged' : 'failed'}">
+  // SRF table (desktop)
+  const rows = data.srf_steps || [];
+  document.getElementById('srf-table').innerHTML = rows.map(row => {
+    const ok = row.iterations < 1000;
+    return `<tr class="${ok ? 'converged' : 'failed'}">
       <td>${row.srf.toFixed(4)}</td>
       <td>${row.max_disp.toExponential(3)}</td>
       <td>${row.iterations}</td>
-      <td>${converged ? '✓ converged' : '✗ did not converge'}</td>
+      <td>${ok ? '✓ converged' : '✗ failed'}</td>
     </tr>`;
   }).join('');
 
+  // SRF cards (mobile)
+  document.getElementById('srf-cards').innerHTML = rows.map(row => {
+    const ok = row.iterations < 1000;
+    return `<div class="srf-card ${ok ? 'converged' : 'failed'}">
+      <div class="srf-status">${ok ? '✓' : '✗'}</div>
+      <div class="srf-main">
+        <div class="srf-srf">SRF = ${row.srf.toFixed(4)}</div>
+        <div class="srf-meta">max disp: ${row.max_disp.toExponential(3)}</div>
+      </div>
+      <div class="srf-iter">${row.iterations}<br>iters</div>
+    </div>`;
+  }).join('');
+
+  // Raw output
   const resOut = document.getElementById('res-output');
   resOut.textContent = data.res || '';
   resOut.classList.remove('visible');
-  document.getElementById('res-toggle').textContent = 'Show full output';
+  document.getElementById('res-toggle').textContent = 'Show full output ▾';
 
   document.getElementById('results').style.display = 'block';
-  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
 }
 
 function showError(msg) {
   const el = document.getElementById('error-box');
-  el.textContent = msg;
+  el.textContent = '⚠ ' + msg;
   el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 document.getElementById('res-toggle').addEventListener('click', () => {
   const pre = document.getElementById('res-output');
   const btn = document.getElementById('res-toggle');
   pre.classList.toggle('visible');
-  btn.textContent = pre.classList.contains('visible') ? 'Hide full output' : 'Show full output';
+  btn.textContent = pre.classList.contains('visible') ? 'Hide full output ▴' : 'Show full output ▾';
 });
 </script>
 </body>
