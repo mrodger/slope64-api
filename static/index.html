@@ -349,87 +349,125 @@
     body { padding-bottom: 0; }
   }
 
-  /* ── Manual chat ── */
-  .chat-section { margin-top: 8px; }
-  .chat-toggle {
-    width: 100%; padding: 14px 18px;
-    display: flex; align-items: center; justify-content: space-between;
+  /* ── Floating Chat Widget ── */
+  .chat-widget {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 380px; max-width: calc(100vw - 40px);
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); font-size: 14px; font-weight: 600;
-    color: var(--primary); cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
+    border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    display: flex; flex-direction: column;
+    z-index: 9999; overflow: hidden;
+    animation: slideUp 0.3s ease;
+    max-height: 600px;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .chat-header {
+    background: var(--primary); color: #fff;
+    padding: 14px 16px; display: flex;
+    align-items: center; justify-content: space-between;
+    font-weight: 600; font-size: 15px;
+  }
+  .chat-header .tabs-mini {
+    display: flex; gap: 8px; flex: 1; margin: 0 12px;
+  }
+  .chat-header .tab-mini {
+    padding: 4px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    background: rgba(255,255,255,0.2); color: #fff;
+    border: none; -webkit-tap-highlight-color: transparent;
     transition: background 0.15s;
   }
-  .chat-toggle:active { background: var(--bg); }
-  .chat-toggle .caret { transition: transform 0.2s; font-size: 12px; color: var(--muted); }
-  .chat-toggle.open .caret { transform: rotate(180deg); }
-
-  .chat-body {
-    display: none; background: var(--surface);
-    border: 1px solid var(--border); border-top: none;
-    border-radius: 0 0 var(--radius) var(--radius);
-    overflow: hidden;
+  .chat-header .tab-mini.active {
+    background: rgba(255,255,255,0.3);
   }
-  .chat-body.open { display: flex; flex-direction: column; }
+  .chat-header .close-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,0.2);
+    color: #fff; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .chat-header .close-btn:active { background: rgba(255,255,255,0.3); }
+
+  .chat-content {
+    display: none; flex-direction: column; flex: 1;
+  }
+  .chat-content.active { display: flex; }
 
   .chat-messages {
-    min-height: 120px; max-height: 340px;
-    overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 14px; display: flex; flex-direction: column; gap: 10px;
   }
   .chat-empty {
-    text-align: center; color: var(--muted); font-size: 13px;
-    padding: 24px 0; line-height: 1.6;
+    text-align: center; color: var(--muted); font-size: 12px;
+    padding: 20px 0; line-height: 1.5;
   }
   .chat-bubble {
-    max-width: 88%; padding: 10px 14px; border-radius: 14px;
-    font-size: 14px; line-height: 1.55; white-space: pre-wrap;
+    max-width: 85%; padding: 9px 12px; border-radius: 16px;
+    font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;
   }
   .chat-bubble.user {
     align-self: flex-end; background: var(--primary); color: #fff;
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: 3px;
   }
   .chat-bubble.assistant {
-    align-self: flex-start; background: var(--bg);
-    border: 1px solid var(--border); color: var(--text);
-    border-bottom-left-radius: 4px;
+    align-self: flex-start; background: #f0f0f0;
+    color: var(--text); border-bottom-left-radius: 3px;
   }
   .chat-bubble.thinking {
-    align-self: flex-start; background: var(--bg);
-    border: 1px solid var(--border); color: var(--muted);
-    font-size: 13px; font-style: italic; border-bottom-left-radius: 4px;
+    align-self: flex-start; background: #f0f0f0;
+    color: var(--muted); font-size: 12px; font-style: italic;
+    border-bottom-left-radius: 3px;
   }
 
   .chat-input-row {
-    display: flex; gap: 8px; padding: 12px;
+    display: flex; gap: 8px; padding: 10px;
     border-top: 1px solid var(--border); background: var(--surface);
   }
   .chat-input {
-    flex: 1; padding: 11px 14px;
-    border: 1.5px solid var(--border); border-radius: 24px;
-    font-size: 15px; font-family: inherit; outline: none;
+    flex: 1; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 18px;
+    font-size: 13px; font-family: inherit; outline: none;
     background: var(--bg); color: var(--text);
-    resize: none; max-height: 120px; line-height: 1.4;
+    resize: none; max-height: 80px; line-height: 1.3;
   }
   .chat-input:focus { border-color: var(--accent); }
   .chat-send {
-    width: 44px; height: 44px; flex-shrink: 0;
+    width: 36px; height: 36px; flex-shrink: 0;
     border: none; border-radius: 50%;
     background: var(--primary); color: #fff;
-    font-size: 18px; cursor: pointer; display: flex;
+    font-size: 16px; cursor: pointer; display: flex;
     align-items: center; justify-content: center;
     -webkit-tap-highlight-color: transparent;
     transition: opacity 0.15s; align-self: flex-end;
   }
   .chat-send:active { opacity: 0.8; }
   .chat-send:disabled { opacity: 0.35; cursor: not-allowed; }
-  .chat-clear {
-    font-size: 12px; color: var(--muted); cursor: pointer;
-    border: none; background: none; padding: 4px 12px 8px;
-    display: block; width: 100%; text-align: center;
-    -webkit-tap-highlight-color: transparent;
+
+  .chat-fab {
+    position: fixed; bottom: 24px; right: 24px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--primary); color: #fff;
+    border: none; font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9998; -webkit-tap-highlight-color: transparent;
+    transition: all 0.2s;
   }
-  .chat-clear:active { color: var(--danger); }
+  .chat-fab:active { transform: scale(0.92); }
+  .chat-fab.hidden { display: none; }
+
+  @media (max-width: 480px) {
+    .chat-widget {
+      width: calc(100vw - 20px); bottom: 10px; right: 10px;
+      max-height: 60vh;
+    }
+    .chat-fab { bottom: 80px; right: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -522,33 +560,43 @@
   </div>
 </div>
 
-<!-- Helper buttons row -->
-<div style="padding: 0 16px; margin-bottom: 16px; display: flex; gap: 10px;">
-  <button class="btn-help" id="helper-btn" style="flex: 1; margin-top: 0;">
-    🤖 AI Helper
-  </button>
-  <button class="btn-help" id="manual-toggle" style="flex: 1; margin-top: 0;">
-    📖 Ask manual
-  </button>
-</div>
+<!-- Floating Chat Widget -->
+<button class="chat-fab" id="chat-fab" title="Open chat">💬</button>
 
-<!-- Manual Q&A chat -->
-<div class="chat-section">
-  <button class="chat-toggle" id="chat-toggle" style="display:none;">
-    <span>📖 Ask the manual</span>
-    <span class="caret">▼</span>
-  </button>
-  <div class="chat-body" id="chat-body">
+<div class="chat-widget" id="chat-widget" style="display:none;">
+  <div class="chat-header">
+    <div class="tabs-mini">
+      <button class="tab-mini active" data-mode="manual">📖 Manual</button>
+      <button class="tab-mini" data-mode="helper">🤖 AI Helper</button>
+    </div>
+    <button class="close-btn" id="close-chat">✕</button>
+  </div>
+
+  <!-- Manual chat -->
+  <div class="chat-content active" id="manual-content">
     <div class="chat-messages" id="chat-messages">
       <div class="chat-empty" id="chat-empty">
-        Ask anything about Slope64 — input format, material parameters,<br>interpreting results, or the FEM method.
+        Ask anything about Slope64 — input format, material parameters, interpreting results, or the FEM method.
       </div>
     </div>
-    <button class="chat-clear" id="chat-clear" style="display:none">Clear conversation</button>
     <div class="chat-input-row">
       <textarea class="chat-input" id="chat-input" rows="1"
-        placeholder="e.g. How do I define a two-layer slope?"></textarea>
+        placeholder="e.g. How do I define material properties?"></textarea>
       <button class="chat-send" id="chat-send" aria-label="Send">↑</button>
+    </div>
+  </div>
+
+  <!-- AI Helper -->
+  <div class="chat-content" id="helper-content">
+    <div class="chat-messages" id="helper-messages" style="justify-content:center;">
+      <div class="chat-empty">
+        Open the AI Helper in a new window for detailed guidance on slope stability analysis.
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <button class="btn" id="open-helper-btn" style="width:100%;margin-top:0;">
+        Open AI Helper in new window →
+      </button>
     </div>
   </div>
 </div>
@@ -827,27 +875,17 @@ document.getElementById('res-toggle').addEventListener('click', () => {
   btn.textContent = pre.classList.contains('visible') ? 'Hide full output ▴' : 'Show full output ▾';
 });
 
-// ── Manual chat ──
+// ── Chat functionality ──
 const chatHistory = []; // {role, content}
-
-const chatToggleBtn = document.getElementById('chat-toggle');
-const chatBody      = document.getElementById('chat-body');
-chatToggleBtn.addEventListener('click', () => {
-  const open = chatBody.classList.toggle('open');
-  chatToggleBtn.classList.toggle('open', open);
-  if (open) document.getElementById('chat-input').focus();
-});
-
 const chatInput   = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send');
 const chatMsgs    = document.getElementById('chat-messages');
 const chatEmpty   = document.getElementById('chat-empty');
-const chatClear   = document.getElementById('chat-clear');
 
 // Auto-grow textarea
 chatInput.addEventListener('input', () => {
   chatInput.style.height = 'auto';
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 80) + 'px';
 });
 
 chatInput.addEventListener('keydown', e => {
@@ -855,17 +893,8 @@ chatInput.addEventListener('keydown', e => {
 });
 chatSendBtn.addEventListener('click', sendChat);
 
-chatClear.addEventListener('click', () => {
-  chatHistory.length = 0;
-  chatMsgs.innerHTML = '';
-  chatMsgs.appendChild(chatEmpty);
-  chatEmpty.style.display = '';
-  chatClear.style.display = 'none';
-});
-
 function appendBubble(role, text) {
   chatEmpty.style.display = 'none';
-  chatClear.style.display = '';
   const el = document.createElement('div');
   el.className = `chat-bubble ${role}`;
   el.textContent = text;
@@ -910,20 +939,40 @@ async function sendChat() {
   }
 }
 
-// AI Helper button — opens slope64-chatbot
-document.getElementById('helper-btn').addEventListener('click', () => {
-  // Determine the chatbot URL (assumes same host, port 8094)
+// ── Floating Chat Widget ──
+const chatFab = document.getElementById('chat-fab');
+const chatWidget = document.getElementById('chat-widget');
+const closeChat = document.getElementById('close-chat');
+const tabsMini = document.querySelectorAll('.tab-mini');
+const chatContents = document.querySelectorAll('.chat-content');
+
+chatFab.addEventListener('click', () => {
+  chatWidget.style.display = chatWidget.style.display === 'none' ? 'flex' : 'none';
+  chatFab.classList.toggle('hidden', chatWidget.style.display !== 'none');
+  if (chatWidget.style.display !== 'none') document.getElementById('chat-input').focus();
+});
+
+closeChat.addEventListener('click', () => {
+  chatWidget.style.display = 'none';
+  chatFab.classList.remove('hidden');
+});
+
+tabsMini.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const mode = tab.dataset.mode;
+    tabsMini.forEach(t => t.classList.remove('active'));
+    chatContents.forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`${mode}-content`).classList.add('active');
+    if (mode === 'manual') document.getElementById('chat-input').focus();
+  });
+});
+
+// Open AI Helper in new window
+document.getElementById('open-helper-btn').addEventListener('click', () => {
   const host = window.location.hostname;
   const chatbotUrl = `http://${host}:8094/`;
   window.open(chatbotUrl, 'slope64-helper', 'width=900,height=700,resizable=yes,scrollbars=yes');
-});
-
-// Manual toggle button
-document.getElementById('manual-toggle').addEventListener('click', () => {
-  const chatToggle = document.getElementById('chat-toggle');
-  const open = document.getElementById('chat-body').classList.toggle('open');
-  chatToggle.classList.toggle('open', open);
-  if (open) document.getElementById('chat-input').focus();
 });
 
 // .dat help modal
