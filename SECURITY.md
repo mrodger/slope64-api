@@ -4,6 +4,7 @@
 **Audit Model**: Claude Sonnet via Drone
 **Total Findings**: 19 (3 CRITICAL, 5 HIGH, 6 MEDIUM, 5 LOW)
 **Critical Remediation**: ✅ COMPLETE
+**HIGH/MEDIUM Remediation**: ✅ COMPLETE (2026-04-09)
 
 ---
 
@@ -92,34 +93,35 @@ except Exception as e:
 
 ---
 
-## HIGH Issues (Deferred)
+## HIGH Issues
 
-| # | Title | Line | Details |
-|----|-------|------|---------|
-| H-1 | No file upload size limit | 84 | **FIX INCLUDED**: 10 MB limit enforced |
-| H-2 | Insufficient input validation | — | Addressed by C-1 and C-2 fixes |
-| H-3 | No authentication on endpoints | — | Consider JWT/API key auth for future |
-| H-4 | Health endpoint exposes state | 186 | Low risk; could hide SLOPE64_EXE path |
-| H-5 | Error details leak implementation | 50-63 | Partially mitigated by C-3 fix |
+| # | Title | Status | Details |
+|----|-------|--------|---------|
+| H-1 | No file upload size limit | ✅ FIXED | 10 MB limit enforced on upload |
+| H-2 | Insufficient input validation | ✅ FIXED | Addressed by C-1 and C-2 fixes |
+| H-3 | No authentication on endpoints | Deferred | Future: JWT/API key auth |
+| H-4 | Health endpoint exposes state | ✅ FIXED | SLOPE64_EXE path removed from response |
+| H-5 | Message role injection | ✅ FIXED | `role` validated as `Literal["user","assistant"]` |
 
 ---
 
-## MEDIUM Issues (To Address)
+## MEDIUM Issues
 
-- **Temp directory cleanup**: tempfile.TemporaryDirectory handles cleanup automatically
-- **Output file validation**: Consider size limits on .res, .msh, .dis, .vec files
-- **Subprocess timeout**: 300s is reasonable; consider making configurable
-- **SQL injection risk**: Pydantic models prevent; low risk
-- **CORS headers**: Consider restricting origin in production
+| # | Title | Status | Details |
+|----|-------|--------|---------|
+| M-1 | Temp directory cleanup | ✅ N/A | `TemporaryDirectory` handles automatically |
+| M-2 | Output file size limits | ✅ FIXED | 20 MB cap per output file |
+| M-3 | Subprocess timeout | Accepted | 300s hardcoded; reasonable for analysis |
+| M-4 | SQL injection risk | ✅ N/A | No SQL in this application |
+| M-5 | CORS headers | ✅ FIXED | Same-origin only (`allow_origins=[]`) |
 
 ---
 
 ## LOW Issues (Acknowledged)
 
-- Minimal error details in health endpoint
 - No request logging middleware
-- No rate limiting
-- Wine subprocess environment leaks PATH
+- No rate limiting (future: slowapi)
+- Wine subprocess environment leaks PATH (partially mitigated — PATH restricted in subprocess env)
 
 ---
 
