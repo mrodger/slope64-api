@@ -32,8 +32,21 @@ If the answer is not covered by the manual, say so clearly.
 
 def run_slope64(dat_path: Path) -> dict:
     """Run slope64.exe on a .dat file, return parsed results."""
-    stem = dat_path.stem
+    # Validate filename to prevent shell injection and path traversal
+    if not dat_path.exists():
+        raise HTTPException(404, detail="Input file not found")
+
+    # Ensure dat_path is a child of a safe working directory (not traversed)
     workdir = dat_path.parent
+    try:
+        dat_path.resolve().relative_to(workdir.resolve())
+    except ValueError:
+        raise HTTPException(400, detail="Invalid file path")
+
+    stem = dat_path.stem
+    # Validate stem: alphanumeric, underscore, hyphen only
+    if not re.match(r'^[a-zA-Z0-9_-]+$', stem):
+        raise HTTPException(400, detail="Invalid filename: only alphanumeric, underscore, and hyphen allowed")
 
     result = subprocess.run(
         ["wine", str(SLOPE64_EXE), stem],
@@ -86,20 +99,38 @@ async def run_uploaded(file: UploadFile = File(...)):
     if not file.filename.endswith(".dat"):
         raise HTTPException(400, detail="File must be a .dat file")
 
+    # Validate file size (10 MB limit)
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, detail=f"File too large (max {MAX_FILE_SIZE // (1024*1024)} MB)")
+
     with tempfile.TemporaryDirectory() as tmpdir:
         dat_path = Path(tmpdir) / "input.dat"
-        dat_path.write_bytes(await file.read())
+        dat_path.write_bytes(content)
         return run_slope64(dat_path)
 
 
 @app.post("/run/{example}")
 def run_example(example: str):
     """Run one of the bundled example cases (ex1–ex7)."""
+    # Validate example parameter to prevent path traversal
+    if not re.match(r'^[a-zA-Z0-9_-]+$', example):
+        raise HTTPException(400, detail="Invalid example name: only alphanumeric, underscore, and hyphen allowed")
+
     src = EXAMPLES_DIR / f"{example}.dat"
+
+    # Ensure src is actually within EXAMPLES_DIR (prevent ../ traversal)
+    try:
+        src.resolve().relative_to(EXAMPLES_DIR.resolve())
+    except ValueError:
+        raise HTTPException(400, detail="Invalid example path")
+
     if not src.exists():
         raise HTTPException(404, detail=f"Example '{example}' not found")
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        # Use a safe filename in temp directory
         dat_path = Path(tmpdir) / f"{example}.dat"
         shutil.copy(src, dat_path)
         return run_slope64(dat_path)
@@ -128,6 +159,8 @@ async def ask(req: AskRequest):
 
     try:
         from openai import OpenAI
+        from openai import APIError
+
         client = OpenAI(api_key=api_key)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -137,8 +170,17 @@ async def ask(req: AskRequest):
             max_tokens=1024,
         )
         return {"reply": response.choices[0].message.content}
+    except KeyError:
+        # Malformed request
+        raise HTTPException(400, detail="Invalid request format")
+    except APIError as e:
+        # OpenAI API errors: do not expose details that might contain credentials
+        raise HTTPException(500, detail="OpenAI API error: please check the server logs")
     except Exception as e:
-        raise HTTPException(500, detail=str(e))
+        # Generic errors: log internally, return safe message
+        import logging
+        logging.error(f"Unexpected error in /ask: {type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(500, detail="Internal server error")
 
 
 @app.get("/health")
