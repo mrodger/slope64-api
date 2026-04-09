@@ -5,3 +5,4 @@ __pycache__/
 bin/slope64.exe
 static/*.png
 static/*.ico
+.env

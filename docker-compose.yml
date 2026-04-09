@@ -1,0 +1,13 @@
+services:
+  slope64-api:
+    build: .
+    runtime: sysbox-runc
+    ports:
+      - "0.0.0.0:8110:8110"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+networks:
+  default:
+    name: slope64-internal
