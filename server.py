@@ -7,15 +7,36 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import Literal
 
 SLOPE64_EXE = Path(__file__).parent / "bin" / "slope64.exe"
 EXAMPLES_DIR = Path(__file__).parent / "examples"
 MANUAL_PATH = Path(__file__).parent / "manual" / "manual.txt"
 
 app = FastAPI(title="Slope64 API", description="FEM slope stability via Griffiths' Slope64")
+
+# CORS — same-origin only (UI is served from the same host)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[],  # no cross-origin access
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 # Load manual once at startup
 _MANUAL_TEXT = MANUAL_PATH.read_text() if MANUAL_PATH.exists() else ""
@@ -78,11 +99,12 @@ def run_slope64(dat_path: Path) -> dict:
         for r in trial_rows
     ]
 
-    # Collect all output files produced by the exe
+    # Collect all output files produced by the exe (5 MB cap per file)
+    MAX_OUTPUT_SIZE = 20 * 1024 * 1024
     output_files = {}
     for ext in (".res", ".msh", ".dis", ".vec"):
         f = workdir / f"{stem}{ext}"
-        if f.exists() and f.stat().st_size > 2:
+        if f.exists() and 2 < f.stat().st_size <= MAX_OUTPUT_SIZE:
             output_files[ext.lstrip(".")] = f.read_text(encoding="latin-1", errors="replace")
 
     return {
@@ -143,7 +165,7 @@ def list_examples():
 
 
 class Message(BaseModel):
-    role: str  # "user" or "assistant"
+    role: Literal["user", "assistant"]
     content: str
 
 class AskRequest(BaseModel):
@@ -185,7 +207,7 @@ async def ask(req: AskRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "exe": str(SLOPE64_EXE), "exe_exists": SLOPE64_EXE.exists()}
+    return {"status": "ok", "exe_exists": SLOPE64_EXE.exists()}
 
 
 # Serve static UI if present
