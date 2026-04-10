@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="24" fill="#1d3a5c"/>
+  <g transform="translate(96 96)">
+    <!-- Main peak -->
+    <path d="M-64 40 L-8 -40 L8 -24 L24 -48 L64 40 Z" fill="none" stroke="#c89632" stroke-width="5" stroke-linejoin="round"/>
+    <!-- Snow cap -->
+    <path d="M16 -36 L24 -48 L32 -32" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round" opacity="0.8"/>
+    <!-- Ground line -->
+    <line x1="-72" y1="40" x2="72" y2="40" stroke="#c89632" stroke-width="3" opacity="0.4"/>
+  </g>
+</svg>

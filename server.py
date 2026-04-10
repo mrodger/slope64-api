@@ -1,22 +1,42 @@
 """Slope64 FastAPI wrapper — runs slope64.exe via Wine and returns results."""
+import json
+import logging
 import os
 import re
 import shutil
 import subprocess
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import List
+from typing import List, Literal, Optional
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+import psycopg2
+import psycopg2.extras
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Literal
+
+log = logging.getLogger(__name__)
 
 SLOPE64_EXE = Path(__file__).parent / "bin" / "slope64.exe"
 EXAMPLES_DIR = Path(__file__).parent / "examples"
 MANUAL_PATH = Path(__file__).parent / "manual" / "manual.txt"
+
+DB_DSN = "host=127.0.0.1 dbname=slope64 user=postgres"
+
+@contextmanager
+def get_db():
+    conn = psycopg2.connect(DB_DSN)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 app = FastAPI(title="Slope64 API", description="FEM slope stability via Griffiths' Slope64")
 
@@ -115,14 +135,30 @@ def run_slope64(dat_path: Path) -> dict:
     }
 
 
+def _store_result(transect_id: int, result: dict, filename: str):
+    """Write FoS + SRF steps back to the transect row in PostGIS."""
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE slope_analyses
+                SET fos = %s, srf_steps = %s, dat_filename = %s
+                WHERE id = %s
+                """,
+                (result.get("fos"), json.dumps(result.get("srf_steps", [])), filename, transect_id),
+            )
+    except Exception as e:
+        log.warning("Failed to store result for transect_id=%s: %s", transect_id, e)
+
+
 @app.post("/run")
-async def run_uploaded(file: UploadFile = File(...)):
-    """Upload a .dat file and run Slope64."""
+async def run_uploaded(file: UploadFile = File(...), transect_id: Optional[int] = Form(None)):
+    """Upload a .dat file and run Slope64. Optionally link to a saved transect."""
     if not file.filename.endswith(".dat"):
         raise HTTPException(400, detail="File must be a .dat file")
 
-    # Validate file size (10 MB limit)
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+    MAX_FILE_SIZE = 10 * 1024 * 1024
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(413, detail=f"File too large (max {MAX_FILE_SIZE // (1024*1024)} MB)")
@@ -130,19 +166,22 @@ async def run_uploaded(file: UploadFile = File(...)):
     with tempfile.TemporaryDirectory() as tmpdir:
         dat_path = Path(tmpdir) / "input.dat"
         dat_path.write_bytes(content)
-        return run_slope64(dat_path)
+        result = run_slope64(dat_path)
+
+    if transect_id is not None:
+        _store_result(transect_id, result, file.filename)
+
+    return result
 
 
 @app.post("/run/{example}")
-def run_example(example: str):
-    """Run one of the bundled example cases (ex1–ex7)."""
-    # Validate example parameter to prevent path traversal
+def run_example(example: str, transect_id: Optional[int] = None):
+    """Run one of the bundled example cases (ex1–ex7). Optionally link to a saved transect."""
     if not re.match(r'^[a-zA-Z0-9_-]+$', example):
         raise HTTPException(400, detail="Invalid example name: only alphanumeric, underscore, and hyphen allowed")
 
     src = EXAMPLES_DIR / f"{example}.dat"
 
-    # Ensure src is actually within EXAMPLES_DIR (prevent ../ traversal)
     try:
         src.resolve().relative_to(EXAMPLES_DIR.resolve())
     except ValueError:
@@ -152,10 +191,14 @@ def run_example(example: str):
         raise HTTPException(404, detail=f"Example '{example}' not found")
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Use a safe filename in temp directory
         dat_path = Path(tmpdir) / f"{example}.dat"
         shutil.copy(src, dat_path)
-        return run_slope64(dat_path)
+        result = run_slope64(dat_path)
+
+    if transect_id is not None:
+        _store_result(transect_id, result, f"{example}.dat")
+
+    return result
 
 
 @app.get("/examples")
@@ -205,13 +248,93 @@ async def ask(req: AskRequest):
         raise HTTPException(500, detail="Internal server error")
 
 
+class TransectRequest(BaseModel):
+    name: Optional[str] = None
+    geojson: dict  # GeoJSON LineString feature or geometry
+
+
+@app.post("/transect")
+def save_transect(req: TransectRequest):
+    """Save a drawn transect (GeoJSON LineString) to PostGIS. Returns the new row ID."""
+    geom = req.geojson
+    # Accept either a Feature or bare geometry
+    if geom.get("type") == "Feature":
+        geom = geom["geometry"]
+    if geom.get("type") != "LineString":
+        raise HTTPException(400, detail="geometry must be a LineString")
+    if len(geom.get("coordinates", [])) < 2:
+        raise HTTPException(400, detail="LineString must have at least 2 points")
+
+    geojson_str = json.dumps(geom)
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO slope_analyses (name, transect)
+                VALUES (%s, ST_GeomFromGeoJSON(%s))
+                RETURNING id
+                """,
+                (req.name or "Unnamed", geojson_str),
+            )
+            row_id = cur.fetchone()[0]
+    except Exception as e:
+        log.error("Failed to save transect: %s", e, exc_info=True)
+        raise HTTPException(500, detail="Failed to save transect")
+
+    return {"id": row_id}
+
+
+@app.get("/transects")
+def get_transects():
+    """Return all analyses as a GeoJSON FeatureCollection."""
+    try:
+        with get_db() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                """
+                SELECT id, name, fos, dat_filename,
+                       to_char(created_at, 'YYYY-MM-DD HH24:MI') AS created_at,
+                       ST_AsGeoJSON(transect)::json AS geometry
+                FROM slope_analyses
+                ORDER BY created_at DESC
+                """
+            )
+            rows = cur.fetchall()
+    except Exception as e:
+        log.error("Failed to load transects: %s", e, exc_info=True)
+        raise HTTPException(500, detail="Failed to load transects")
+
+    features = []
+    for row in rows:
+        features.append({
+            "type": "Feature",
+            "geometry": row["geometry"],
+            "properties": {
+                "id": row["id"],
+                "name": row["name"],
+                "fos": row["fos"],
+                "dat_filename": row["dat_filename"],
+                "created_at": row["created_at"],
+            },
+        })
+
+    return JSONResponse({"type": "FeatureCollection", "features": features})
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "exe_exists": SLOPE64_EXE.exists()}
 
 
+STATIC_DIR = Path(__file__).parent / "static"
+
+@app.get("/manifest.json")
+def manifest():
+    return FileResponse(str(STATIC_DIR / "manifest.json"), media_type="application/manifest+json")
+
 # Serve static UI if present
-if (Path(__file__).parent / "static").exists():
+if STATIC_DIR.exists():
     app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
