@@ -1,10 +1,10 @@
 FROM postgis/postgis:16-3.4
 
-# Install Python 3.12, Wine, supervisord, curl
+# Install Python, Wine, supervisord, curl
+# postgis:16-3.4 is Debian Bullseye — python3 = 3.9, sufficient for FastAPI
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 python3.12-venv python3-pip \
+    python3 python3-pip \
     curl supervisor \
-    gnupg software-properties-common \
     && dpkg --add-architecture i386 \
     && apt-get update \
     && apt-get install -y --no-install-recommends wine wine32 \
@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt --break-system-packages
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY . .
 
